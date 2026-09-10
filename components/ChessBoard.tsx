@@ -1,34 +1,22 @@
+'use client';
+
 import React, { useState } from 'react';
-import { Piece } from './Piece';
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+import { ChessPiece } from './chess/ChessPiece';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { soundManager } from '@/lib/audio';
 
 interface ChessBoardProps {
-  board: string[][];
+  board: string[][]; // 8x8 matrix where row 0 is rank 8, row 7 is rank 1
   onMove: (from: string, to: string) => void;
   canMakeMove: boolean;
-  calculatePossibleMoves: (board: string[][], from: string) => string[];
-  promotionPending: boolean;
-  promotionSquare: string | null;
-  onPromotion: (piece: string) => void;
-}
-
-const getPieceSymbol = (piece: string) => {
-  switch (piece.toUpperCase()) {
-    case 'Q': return '♛';
-    case 'R': return '♜';
-    case 'B': return '♝';
-    case 'N': return '♞';
-    case 'K': return '♚';
-    case 'P': return '♟';
-    case 'q': return '♕';
-    case 'r': return '♖';
-    case 'b': return '♗';
-    case 'n': return '♘';
-    case 'k': return '♔';
-    case 'p': return '♙';
-    default: return piece;
-  }
+  calculatePossibleMoves: (position: string) => string[];
+  promotionPending?: boolean;
+  promotionSquare?: string | null;
+  onPromotion?: (piece: string) => void;
+  isCheck?: boolean;
+  currentTurn?: 'white' | 'black';
+  lastMove?: { from: string; to: string } | null;
+  orientation?: 'white' | 'black';
 }
 
 const PromotionDialog: React.FC<{
@@ -41,13 +29,20 @@ const PromotionDialog: React.FC<{
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-white dark:bg-gray-800">
-        <DialogTitle className="text-gray-900 dark:text-gray-100">Choose promotion piece</DialogTitle>
-        <div className="flex justify-around">
+      <DialogContent className="sm:max-w-xs bg-slate-900 border-slate-800 text-slate-100 p-6 text-center">
+        <DialogTitle className="text-xl font-bold text-white mb-1">Pawn Promotion</DialogTitle>
+        <DialogDescription className="text-xs text-slate-400 mb-4">
+          Choose a piece to promote your pawn
+        </DialogDescription>
+        <div className="grid grid-cols-4 gap-2">
           {pieces.map((piece) => (
-            <Button key={piece} onClick={() => onPromotion(piece)} className="text-4xl bg-amber-100 dark:bg-amber-800 text-gray-900 dark:text-gray-100">
-              {getPieceSymbol(piece)}
-            </Button>
+            <button
+              key={piece}
+              onClick={() => onPromotion(piece)}
+              className="aspect-square flex items-center justify-center p-2 rounded-xl bg-slate-800 hover:bg-emerald-600/80 border border-slate-700 hover:border-emerald-500 transition-all hover:scale-105 active:scale-95 shadow-md"
+            >
+              <ChessPiece type={piece} />
+            </button>
           ))}
         </div>
       </DialogContent>
@@ -55,94 +50,161 @@ const PromotionDialog: React.FC<{
   );
 };
 
-const Square: React.FC<{
-  position: string;
-  isSelected: boolean;
-  isPossibleMove: boolean;
-  onClick: () => void;
-  children?: React.ReactNode;
-}> = ({ position, isSelected, isPossibleMove, onClick, children }) => {
-  const isLight = (position.charCodeAt(0) - 97 + parseInt(position[1])) % 2 === 0;
-
-  return (
-    <div
-      onClick={onClick}
-      className={`aspect-square flex items-center justify-center cursor-pointer transition-all duration-200
-      ${isLight ? 'bg-amber-200 dark:bg-amber-700' : 'bg-amber-800 dark:bg-amber-900'}
-      ${isSelected ? 'ring-4 ring-blue-500' : ''}
-      ${isPossibleMove ? 'ring-4 ring-green-500' : ''}
-      hover:opacity-80`}
-    >
-      {children}
-      {isPossibleMove && !children && (
-        <div className="w-3 h-3 rounded-full bg-green-500 opacity-50"></div>
-      )}
-    </div>
-  );
-};
-
-
-export const ChessBoard: React.FC<ChessBoardProps> = React.memo(({ board, onMove, canMakeMove, calculatePossibleMoves, promotionPending, promotionSquare, onPromotion }) => {
+export const ChessBoard: React.FC<ChessBoardProps> = React.memo(({
+  board,
+  onMove,
+  canMakeMove,
+  calculatePossibleMoves,
+  promotionPending = false,
+  promotionSquare = null,
+  onPromotion = () => {},
+  isCheck = false,
+  currentTurn = 'white',
+  lastMove = null,
+  orientation = 'white',
+}) => {
   const [selectedPiece, setSelectedPiece] = useState<string | null>(null);
   const [possibleMoves, setPossibleMoves] = useState<string[]>([]);
 
+  const isFlipped = orientation === 'black';
+
+  // Files and Ranks depending on orientation
+  const files = isFlipped ? ['h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'] : ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  const ranks = isFlipped ? ['1', '2', '3', '4', '5', '6', '7', '8'] : ['8', '7', '6', '5', '4', '3', '2', '1'];
+
+  const getPieceAtPosition = (pos: string): string => {
+    const col = pos.charCodeAt(0) - 97;
+    const row = 8 - parseInt(pos[1]);
+    if (board && board[row] && board[row][col] !== undefined) {
+      return board[row][col];
+    }
+    return '';
+  };
+
   const handleSquareClick = (position: string) => {
-    console.log('Square clicked:', position, 'Can make move:', canMakeMove);
     if (!canMakeMove) {
-      console.log('Cannot make move now');
+      setSelectedPiece(null);
       setPossibleMoves([]);
       return;
     }
 
     if (selectedPiece) {
       if (possibleMoves.includes(position)) {
-        console.log('Attempting move from', selectedPiece, 'to', position);
         onMove(selectedPiece, position);
         setSelectedPiece(null);
         setPossibleMoves([]);
       } else {
-        setSelectedPiece(null);
-        setPossibleMoves([]);
+        const pieceAtSquare = getPieceAtPosition(position);
+        const isOwnPiece = pieceAtSquare && (
+          (currentTurn === 'white' && pieceAtSquare === pieceAtSquare.toUpperCase()) ||
+          (currentTurn === 'black' && pieceAtSquare === pieceAtSquare.toLowerCase())
+        );
+
+        if (isOwnPiece) {
+          setSelectedPiece(position);
+          const moves = calculatePossibleMoves(position);
+          setPossibleMoves(moves);
+        } else {
+          setSelectedPiece(null);
+          setPossibleMoves([]);
+        }
       }
     } else {
-      const [col, row] = position.split('');
-      const piece = board[8 - parseInt(row)][col.charCodeAt(0) - 97];
-      if (piece) {
-        console.log('Selecting piece:', piece, 'at', position);
+      const pieceAtSquare = getPieceAtPosition(position);
+      const isOwnPiece = pieceAtSquare && (
+        (currentTurn === 'white' && pieceAtSquare === pieceAtSquare.toUpperCase()) ||
+        (currentTurn === 'black' && pieceAtSquare === pieceAtSquare.toLowerCase())
+      );
+
+      if (isOwnPiece) {
         setSelectedPiece(position);
-        const moves = calculatePossibleMoves(board, position);
+        const moves = calculatePossibleMoves(position);
         setPossibleMoves(moves);
       }
     }
   };
 
   return (
-    <div className="w-full max-w-[80vmin] aspect-square">
-      <div className="grid grid-cols-8 gap-0 w-full h-full border-4 border-amber-800 rounded-lg shadow-lg overflow-hidden">
-        {board.map((row, rowIndex) =>
-          row.map((piece, colIndex) => {
-            const position = `${String.fromCharCode(97 + colIndex)}${8 - rowIndex}`;
+    <div className="relative w-full max-w-[min(100vw-24px,560px)] aspect-square select-none p-1 sm:p-3.5 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 rounded-xl sm:rounded-2xl shadow-2xl border border-slate-800/80 ring-1 ring-white/5 touch-manipulation">
+      {/* Board grid container */}
+      <div className="w-full h-full grid grid-cols-8 grid-rows-8 rounded-lg sm:rounded-xl overflow-hidden shadow-inner border sm:border-2 border-slate-950">
+        {ranks.map((rank) =>
+          files.map((file) => {
+            const position = `${file}${rank}`;
+            const piece = getPieceAtPosition(position);
+
+            const fileIdx = file.charCodeAt(0) - 97;
+            const rankIdx = parseInt(rank);
+            const isLightSquare = (fileIdx + rankIdx) % 2 !== 0;
+
+            const isSelected = selectedPiece === position;
+            const isPossibleTarget = possibleMoves.includes(position);
+            const isLastMoveSquare = lastMove && (lastMove.from === position || lastMove.to === position);
+            const isCheckedKing = isCheck && piece && (
+              (currentTurn === 'white' && piece === 'K') ||
+              (currentTurn === 'black' && piece === 'k')
+            );
+
+            // Coordinates display flags
+            const showFileCoord = rank === (isFlipped ? '8' : '1');
+            const showRankCoord = file === (isFlipped ? 'h' : 'a');
+
             return (
-              <Square
+              <div
                 key={position}
-                position={position}
-                isSelected={position === selectedPiece}
-                isPossibleMove={possibleMoves.includes(position)}
                 onClick={() => handleSquareClick(position)}
+                className={`relative aspect-square flex items-center justify-center cursor-pointer transition-colors duration-100 ${
+                  isLightSquare
+                    ? 'bg-[#EEEED2] hover:bg-[#F5F5E0] text-[#779952]'
+                    : 'bg-[#769656] hover:bg-[#86A666] text-[#EEEED2]'
+                } ${
+                  isSelected ? '!bg-[#BACA44] ring-2 ring-inset ring-amber-400/80' : ''
+                } ${
+                  isLastMoveSquare && !isSelected ? '!bg-[#CDD26A]' : ''
+                } ${
+                  isCheckedKing ? '!bg-red-600/90 shadow-inner animate-pulse' : ''
+                }`}
               >
-                {piece && <Piece type={piece} />}
-              </Square>
+                {/* File coordinate label */}
+                {showFileCoord && (
+                  <span className="absolute bottom-0.5 right-1 text-[9px] sm:text-[11px] font-bold pointer-events-none opacity-80 select-none">
+                    {file}
+                  </span>
+                )}
+
+                {/* Rank coordinate label */}
+                {showRankCoord && (
+                  <span className="absolute top-0.5 left-1 text-[9px] sm:text-[11px] font-bold pointer-events-none opacity-80 select-none">
+                    {rank}
+                  </span>
+                )}
+
+                {/* Possible move indicator dot or capture ring */}
+                {isPossibleTarget && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                    {piece ? (
+                      <div className="w-[84%] h-[84%] rounded-full border-4 sm:border-[5px] border-emerald-500/80 opacity-90 shadow-sm" />
+                    ) : (
+                      <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-emerald-600/80 opacity-90 shadow-sm" />
+                    )}
+                  </div>
+                )}
+
+                {/* Piece representation */}
+                {piece && <ChessPiece type={piece} />}
+              </div>
             );
           })
         )}
       </div>
+
+      {/* Pawn Promotion Dialog */}
       <PromotionDialog
         isOpen={promotionPending}
-        onClose={() => {}} // This should be handled by the parent component
+        onClose={() => {}}
         onPromotion={onPromotion}
         color={promotionSquare && promotionSquare[1] === '8' ? 'white' : 'black'}
       />
     </div>
   );
 });
-

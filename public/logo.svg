@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A" />
+      <stop offset="50%" stop-color="#020617" />
+      <stop offset="100%" stop-color="#0B0F19" />
+    </linearGradient>
+
+    <!-- Border Gradient -->
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="50%" stop-color="#065F46" />
+      <stop offset="100%" stop-color="#F59E0B" />
+    </linearGradient>
+
+    <!-- Emerald Knight Gradient -->
+    <linearGradient id="knightBody" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34D399" />
+      <stop offset="45%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+
+    <!-- Amber Glow Gradient -->
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE68A" />
+      <stop offset="50%" stop-color="#F59E0B" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+
+    <!-- Dark Facet Gradient -->
+    <linearGradient id="darkFacet" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+
+    <!-- Glow Filter -->
+    <filter id="emeraldGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <radialGradient id="auraGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#10B981" stop-opacity="0.25" />
+      <stop offset="70%" stop-color="#10B981" stop-opacity="0.05" />
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Background Squircle with Border -->
+  <rect x="24" y="24" width="464" height="464" rx="108" fill="url(#bgGrad)" stroke="url(#borderGrad)" stroke-width="12" />
+
+  <!-- Subtle Radial Aura -->
+  <circle cx="256" cy="240" r="190" fill="url(#auraGlow)" />
+
+  <!-- Geometric Tournament Knight Chess Emblem -->
+  <g transform="translate(256, 246) scale(1.05) translate(-256, -256)">
+    <!-- Base Pedestal -->
+    <path d="M 148 386 L 364 386 L 350 416 L 162 416 Z" fill="url(#goldAccent)" filter="drop-shadow(0 4px 12px rgba(0,0,0,0.5))" />
+    <path d="M 132 416 L 380 416 L 372 430 L 140 430 Z" fill="#0F172A" stroke="#10B981" stroke-width="3" />
+
+    <!-- Knight Torso / Neck (Rear Curve & Crest) -->
+    <path d="M 284 386 L 340 386 L 346 300 C 348 240 326 190 286 148 L 260 120 L 254 136 L 244 126 L 236 146 L 220 134 C 200 160 178 200 166 242 C 158 272 172 292 202 290 C 230 288 238 270 242 254 C 254 286 266 336 284 386 Z" fill="url(#knightBody)" />
+
+    <!-- Snout & Jaw -->
+    <path d="M 220 134 C 202 144 174 162 142 198 C 130 212 136 230 152 232 C 172 234 186 226 202 216 L 202 242 C 202 270 220 284 246 278 L 242 254 C 238 270 230 288 202 290 C 172 292 158 272 166 242 C 178 200 200 160 220 134 Z" fill="url(#darkFacet)" stroke="#10B981" stroke-width="2" />
+
+    <!-- Muzzle Highlight -->
+    <path d="M 142 198 L 194 172 L 202 216 C 186 226 172 234 152 232 C 136 230 130 212 142 198 Z" fill="url(#knightBody)" opacity="0.9" />
+
+    <!-- Mane Spine Ridge -->
+    <path d="M 260 120 L 286 148 C 326 190 348 240 346 300 L 324 300 C 324 248 306 206 274 168 L 254 136 Z" fill="#047857" />
+
+    <!-- Crown Crest Spikes -->
+    <polygon points="260,120 274,104 278,124" fill="url(#goldAccent)" />
+    <polygon points="244,126 254,100 262,120" fill="url(#goldAccent)" />
+    <polygon points="236,146 238,114 248,130" fill="url(#goldAccent)" />
+
+    <!-- Knight Fierce Eye -->
+    <polygon points="208,188 226,182 220,196" fill="url(#goldAccent)" filter="url(#emeraldGlow)" />
+    <circle cx="218" cy="188" r="3" fill="#FFFFFF" />
+
+    <!-- Nostril Slit -->
+    <path d="M 160 210 Q 166 206 172 212" stroke="url(#goldAccent)" stroke-width="4" stroke-linecap="round" fill="none" />
+
+    <!-- Chest Armor Accent Line -->
+    <path d="M 242 254 Q 256 310 274 386" stroke="url(#goldAccent)" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.8" />
+  </g>
+</svg>
